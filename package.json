@@ -1,0 +1,35 @@
+{
+  "name": "github-approve-slack",
+  "version": "1.0.0",
+  "description": "Slack app to show GitHub PR details with approve button",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "mocha src/test/**/*.test.js",
+    "demo": "node demo/example-usage.js",
+    "docker:build": "docker build -t github-approve-slack .",
+    "docker:run": "docker run -d --name github-approve-slack -p 3000:3000 --env-file .env github-approve-slack",
+    "docker:stop": "docker stop github-approve-slack && docker rm github-approve-slack",
+    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:stop": "pm2 stop github-approve-slack",
+    "pm2:restart": "pm2 restart github-approve-slack",
+    "pm2:logs": "pm2 logs github-approve-slack",
+    "deploy:test": "node scripts/deploy-test.js"
+  },
+  "dependencies": {
+    "@slack/bolt": "^3.17.1",
+    "@octokit/rest": "^20.0.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "mocha": "^10.2.0",
+    "chai": "^4.3.10",
+    "sinon": "^17.0.1"
+  },
+  "keywords": ["slack", "github", "pr", "approval"],
+  "author": "",
+  "license": "MIT"
+} 

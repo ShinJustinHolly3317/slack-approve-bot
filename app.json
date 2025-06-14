@@ -1,0 +1,36 @@
+{
+  "name": "github-approve-slack",
+  "description": "Slack app to approve GitHub PRs with interactive buttons",
+  "repository": "https://github.com/your-username/github-approve-slack",
+  "logo": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+  "keywords": ["slack", "github", "pr", "approval", "code-review"],
+  "env": {
+    "SLACK_BOT_TOKEN": {
+      "description": "Slack Bot User OAuth Token (starts with xoxb-)",
+      "required": true
+    },
+    "SLACK_SIGNING_SECRET": {
+      "description": "Slack App Signing Secret",
+      "required": true
+    },
+    "SLACK_APP_TOKEN": {
+      "description": "Slack App-Level Token (starts with xapp-)",
+      "required": true
+    },
+    "GITHUB_TOKEN": {
+      "description": "GitHub Personal Access Token",
+      "required": true
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "eco"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ]
+} 
