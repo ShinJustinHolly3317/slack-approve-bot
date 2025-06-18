@@ -4,6 +4,7 @@ const { App, LogLevel } = require('@slack/bolt');
 
 const GitHubService = require('./services/GitHubService');
 const SlackMessageBuilder = require('./services/SlackMessageBuilder');
+const userMap = require('../user-map');
 
 // Initialize Slack app
 const app = new App({
@@ -15,7 +16,8 @@ const app = new App({
     process.env.NODE_ENV === 'production' ? LogLevel.INFO : LogLevel.DEBUG,
 });
 
-const githubService = new GitHubService(process.env.GITHUB_TOKEN);
+// A default service for read-only actions, using the app's main GITHUB_TOKEN
+const defaultGitHubService = new GitHubService(process.env.GITHUB_TOKEN);
 const messageBuilder = new SlackMessageBuilder();
 
 // Listen for GitHub PR URLs in messages
@@ -43,7 +45,7 @@ app.message(
       logger.info('   🔄 Fetching PR details from GitHub...');
 
       // Get PR details from GitHub
-      const prData = await githubService.getPullRequest(
+      const prData = await defaultGitHubService.getPullRequest(
         owner,
         repo,
         pullNumber
@@ -84,20 +86,31 @@ app.message(
 // Handle approve button clicks
 app.action('approve_pr', async ({ ack, body, client, logger }) => {
   await ack();
+  const userId = body.user.id;
+  const githubToken = userMap[userId];
+
+  if (!githubToken || githubToken === 'YOUR_GITHUB_TOKEN_HERE') {
+    await client.chat.postEphemeral({
+      channel: body.channel.id,
+      user: userId,
+      text: "Your GitHub token isn't configured. Please ask the app administrator to add it to the `user-map.js` file.",
+    });
+    return;
+  }
+
+  const userGitHubService = new GitHubService(githubToken);
 
   try {
     const { owner, repo, pull_number } = JSON.parse(body.actions[0].value);
-    const userId = body.user.id;
 
-    // Get user info to show who approved
     const userInfo = await client.users.info({ user: userId });
     const userName = userInfo.user.real_name || userInfo.user.name;
 
     logger.info(
-      `[APPROVAL] User ${userName} is approving PR: ${owner}/${repo}#${pull_number}`
+      `[APPROVAL] User ${userName} (${userId}) is approving PR: ${owner}/${repo}#${pull_number}`
     );
 
-    await githubService.approvePullRequest(owner, repo, pull_number);
+    await userGitHubService.approvePullRequest(owner, repo, pull_number);
 
     logger.info(`[APPROVAL] Successfully approved PR on GitHub.`);
 
@@ -140,6 +153,18 @@ app.action('approve_pr', async ({ ack, body, client, logger }) => {
 app.action('request_changes', async ({ ack, body, client, logger }) => {
   await ack();
 
+  const userId = body.user.id;
+  const githubToken = userMap[userId];
+
+  if (!githubToken || githubToken === 'YOUR_GITHUB_TOKEN_HERE') {
+    await client.chat.postEphemeral({
+      channel: body.channel.id,
+      user: userId,
+      text: "Your GitHub token isn't configured. Please ask the app administrator to add it.",
+    });
+    return;
+  }
+
   try {
     const { owner, repo, pull_number } = JSON.parse(body.actions[0].value);
 
@@ -164,15 +189,19 @@ app.view(
   'request_changes_modal',
   async ({ ack, body, view, client, logger }) => {
     await ack();
+    const userId = body.user.id;
+    const githubToken = userMap[userId];
+
+    // No need to check token here as it was checked before opening the modal,
+    // but we still need to create the user-specific service.
+    const userGitHubService = new GitHubService(githubToken);
 
     try {
       const { owner, repo, pull_number, channel_id, message_ts } = JSON.parse(
         view.private_metadata
       );
       const comment = view.state.values.comment_block.comment_input.value;
-      const userId = body.user.id;
 
-      // Get user info
       const userInfo = await client.users.info({ user: userId });
       const userName = userInfo.user.real_name || userInfo.user.name;
 
@@ -180,14 +209,7 @@ app.view(
         `[CHANGES] User ${userName} is requesting changes for PR: ${owner}/${repo}#${pull_number}`
       );
 
-      // Request changes on GitHub (submitting a review with comments)
-      await githubService.requestChanges(
-        owner,
-        repo,
-        pull_number,
-        comment,
-        userName
-      );
+      await userGitHubService.requestChanges(owner, repo, pull_number, comment);
 
       logger.info(`[CHANGES] Successfully submitted review to GitHub.`);
 

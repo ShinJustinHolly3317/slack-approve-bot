@@ -84,11 +84,7 @@ class GitHubService {
   /**
    * Approve a pull request
    */
-  async approvePullRequest(
-    owner,
-    repo,
-    pullNumber,
-  ) {
+  async approvePullRequest(owner, repo, pullNumber) {
     try {
       const { data } = await this.octokit.rest.pulls.createReview({
         owner,
@@ -107,17 +103,14 @@ class GitHubService {
   /**
    * Request changes on a pull request
    */
-  async requestChanges(owner, repo, pullNumber, body, reviewerName) {
+  async requestChanges(owner, repo, pullNumber, body) {
     try {
-      const reviewBody =
-        body || `Changes requested via Slack by ${reviewerName}`;
-
       const { data } = await this.octokit.rest.pulls.createReview({
         owner,
         repo,
         pull_number: parseInt(pullNumber),
         event: 'REQUEST_CHANGES',
-        body: reviewBody,
+        body: body,
       });
 
       return data;
